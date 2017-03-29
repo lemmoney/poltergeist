@@ -216,6 +216,7 @@ class Poltergeist.Browser
     @currentPage.frameUrl(frame_name)
 
   pushFrame: (command, name, timeout) ->
+    @debug "pushFrame: name=#{name} timeout=#{timeout} "
     if Array.isArray(name)
       frame = this.node(name...)
       name = frame.getAttribute('name') || frame.getAttribute('id')
@@ -224,22 +225,33 @@ class Poltergeist.Browser
         name = frame.getAttribute('name')
 
     frame_url = @frameUrl(name)
+    @debug "frameUrl is #{frame_url}"
     if frame_url in @currentPage.blockedUrls()
       command.sendResponse(true)
     else if @currentPage.pushFrame(name)
+      @debug "currentUrl is #{@currentPage.currentUrl()}"
       if frame_url && (frame_url != 'about:blank') && (@currentPage.currentUrl() == 'about:blank')
+        @debug "waiting for frame load - initial state = #{@currentPage.state} setting to 'awaiting_frame_load'"
         @currentPage.state = 'awaiting_frame_load'
-        @currentPage.waitState 'default', ->
+        @currentPage.waitState 'default', =>
+          @debug "page state became 'default'"
           command.sendResponse(true)
+        , 3, =>
+          @debug "Frame state hasn't become 'default' in 3 seconds stuck at - #{@currentPage.state} - open resources are #{@currentPage.openResourceRequests().join(',')}"
       else
+        @debug "already loaded"
         command.sendResponse(true)
     else
+      @debug "failed to push frame"
       if new Date().getTime() < timeout
+        @debug "delaying a bit"
         setTimeout((=> @pushFrame(command, name, timeout)), 50)
       else
+        @debug "frame not found"
         command.sendError(new Poltergeist.FrameNotFound(name))
 
   push_frame: (name, timeout = (new Date().getTime()) + 2000) ->
+    @debug "push_frame - current state is #{@currentPage.state} for page #{@currentPage.id}"
     @pushFrame(@current_command, name, timeout)
 
   pop_frame: (pop_all = false)->
