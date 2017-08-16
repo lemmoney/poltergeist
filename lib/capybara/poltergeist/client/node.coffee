@@ -24,9 +24,9 @@ class Poltergeist.Node
       pos = image.position()
 
       if area_offset = @_getAreaOffsetRect()
-        pos.left = pos.left + area_offset.x
+        pos.left += area_offset.x
         pos.right = pos.left + area_offset.width
-        pos.top = pos.top + area_offset.y
+        pos.top += area_offset.y
         pos.bottom = pos.top + area_offset.height
     else
       pos = this.position()

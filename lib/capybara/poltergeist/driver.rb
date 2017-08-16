@@ -3,10 +3,14 @@ require 'uri'
 module Capybara::Poltergeist
   class Driver < Capybara::Driver::Base
     DEFAULT_TIMEOUT = 30
+    VALID_DRIVER_OPTIONS = [:phantomjs, :debug, :logger, :phantomjs_logger, :timeout, :inspector, :js_errors,
+                            :window_size, :screen_size, :phantomjs_options, :extensions, :port, :host,
+                            :url_blacklist, :url_whitelist]
 
     attr_reader :app, :options
 
     def initialize(app, options = {})
+      validate_options(options)
       @app       = app
       @options   = options
       @browser   = nil
@@ -441,6 +445,11 @@ module Capybara::Poltergeist
       else
         arg
       end
+    end
+
+    def validate_options(options)
+      invalid_options = options.keys - VALID_DRIVER_OPTIONS
+      warn "Invalid option(s) passed to driver - #{invalid_options} - ignoring." if invalid_options.any?
     end
   end
 end

@@ -6,7 +6,7 @@ class Poltergeist.Cmd
       errors = @browser.currentPage.errors
       @browser.currentPage.clearErrors()
 
-      if errors.length > 0 && @browser.js_errors
+      if @browser.js_errors and errors.length > 0
         @sendError(new Poltergeist.JavascriptError(errors))
       else
         @owner.sendResponse(@id, response)

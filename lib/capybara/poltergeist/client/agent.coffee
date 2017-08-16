@@ -27,7 +27,7 @@ class PoltergeistAgent
       this.register(el) for el in results
     catch error
       # DOMException.INVALID_EXPRESSION_ERR is undefined, using pure code
-      if error.code == DOMException.SYNTAX_ERR || error.code == 51
+      if error.code in [DOMException.SYNTAX_ERR, 51]
         throw new PoltergeistAgent.InvalidSelector
       else
         throw error
@@ -37,8 +37,9 @@ class PoltergeistAgent
     @elements.length - 1
 
   documentSize: ->
-    height: document.documentElement.scrollHeight || document.documentElement.clientHeight,
-    width:  document.documentElement.scrollWidth  || document.documentElement.clientWidth
+    doc = document.documentElement
+    height: doc.scrollHeight || doc.clientHeight,
+    width:  doc.scrollWidth  || doc.clientWidth
 
   get: (id) ->
     @nodes[id] or= new PoltergeistAgent.Node(this, @elements[id])
@@ -62,7 +63,7 @@ class PoltergeistAgent
     switch
       when result in @_visitedObjects
         '(cyclic structure)'
-      when Array.isArray(result) || (result instanceof NodeList)
+      when Array.isArray(result), result instanceof NodeList
         @wrapResults(res, page_id) for res in result
       when result && result.nodeType == 1 && result['tagName']
         {'ELEMENT': { id: @register(result), page_id: page_id } };
@@ -98,11 +99,8 @@ class PoltergeistAgent.Node
 
   parentIds: ->
     ids = []
-    parent = @element.parentNode
-    while parent != document
-      ids.push @agent.register(parent)
-      parent = parent.parentNode
-    ids
+    elem = @element
+    @agent.register(elem) while (elem=elem.parentNode) != document
 
   find: (method, selector) ->
     @agent.find(method, selector, @element)
@@ -127,7 +125,6 @@ class PoltergeistAgent.Node
     if @element.nodeName == 'OPTION'
       element = @element.parentNode
       element = element.parentNode if element.nodeName == 'OPTGROUP'
-      element
     else
       element = @element
 
@@ -168,10 +165,8 @@ class PoltergeistAgent.Node
 
   visibleText: ->
     if this.isVisible()
-      if @element.nodeName == "TEXTAREA"
-        @element.textContent
-      else
-        if @element instanceof SVGElement
+      switch
+        when @element.nodeName == "TEXTAREA", @element instanceof SVGElement
           @element.textContent
         else
           @element.innerText
@@ -189,7 +184,7 @@ class PoltergeistAgent.Node
   getAttributes: ->
     attrs = {}
     for attr in @element.attributes
-      attrs[attr.name] = attr.value.replace("\n","\\n");
+      attrs[attr.name] = attr.value.replace("\n","\\n")
     attrs
 
   getAttribute: (name) ->
@@ -294,7 +289,7 @@ class PoltergeistAgent.Node
     @element.disabled || document.evaluate(xpath, @element, null, XPathResult.BOOLEAN_TYPE, null).booleanValue
 
   path: ->
-    elements = @parentIds().reverse().map((id) => @agent.get(id))
+    elements = (@agent.get(id) for id in @parentIds() by -1)
     elements.push(this)
     selectors = elements.map (el)->
       prev_siblings = el.find('xpath', "./preceding-sibling::#{el.tagName()}")
@@ -331,30 +326,28 @@ class PoltergeistAgent.Node
     throw new PoltergeistAgent.ObsoleteNode unless rect
     frameOffset = this.frameOffset()
 
-    pos = {
-      top:    rect.top    + frameOffset.top,
-      right:  rect.right  + frameOffset.left,
-      left:   rect.left   + frameOffset.left,
-      bottom: rect.bottom + frameOffset.top,
-      width:  rect.width,
-      height: rect.height
-    }
-
-    pos
+    top:    rect.top    + frameOffset.top,
+    right:  rect.right  + frameOffset.left,
+    left:   rect.left   + frameOffset.left,
+    bottom: rect.bottom + frameOffset.top,
+    width:  rect.width,
+    height: rect.height
 
   trigger: (name, element = @element) ->
-    if Node.EVENTS.MOUSE.indexOf(name) != -1
-      event = document.createEvent('MouseEvent')
-      event.initMouseEvent(
-        name, true, true, window, 0, 0, 0, 0, 0,
-        false, false, false, false, 0, null
-      )
-    else if Node.EVENTS.FOCUS.indexOf(name) != -1
-      event = this.obtainEvent(name)
-    else if Node.EVENTS.FORM.indexOf(name) != -1
-      event = this.obtainEvent(name)
-    else
-      throw "Unknown event"
+    event = switch
+      when name in Node.EVENTS.MOUSE
+        e = document.createEvent('MouseEvent')
+        e.initMouseEvent(
+          name, true, true, window, 0, 0, 0, 0, 0,
+          false, false, false, false, 0, null
+        )
+        e
+      when name in Node.EVENTS.FOCUS
+        @obtainEvent(name)
+      when name in Node.EVENTS.FORM
+        @obtainEvent(name)
+      else
+        throw "Unknown event"
 
     element.dispatchEvent(event)
 

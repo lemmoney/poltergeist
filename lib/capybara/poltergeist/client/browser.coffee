@@ -253,8 +253,7 @@ class Poltergeist.Browser
 
   window_handle: (name = null) ->
     handle = if name
-      page = @pages.filter((p) -> !p.closed && p.windowName() == name)[0]
-      if page then page.handle else null
+      @pages.filter((p) -> !p.closed && p.windowName() == name)[0]?.handle
     else
       @currentPage.handle
 
@@ -287,7 +286,7 @@ class Poltergeist.Browser
 
   mouse_event: (page_id, id, name) ->
     # Get the node before changing state, in case there is an exception
-    node = this.node(page_id, id)
+    node = @node(page_id, id)
     # If the event triggers onNavigationRequested, we will transition to the 'loading'
     # state and wait for onLoadFinished before sending a response.
     @currentPage.state = 'mouse_event'
@@ -307,38 +306,38 @@ class Poltergeist.Browser
     , 5
 
   click: (page_id, id) ->
-    this.mouse_event page_id, id, 'click'
+    @mouse_event page_id, id, 'click'
 
   right_click: (page_id, id) ->
-    this.mouse_event page_id, id, 'rightclick'
+    @mouse_event page_id, id, 'rightclick'
 
   double_click: (page_id, id) ->
-    this.mouse_event page_id, id, 'doubleclick'
+    @mouse_event page_id, id, 'doubleclick'
 
   hover: (page_id, id) ->
-    this.mouse_event page_id, id, 'mousemove'
+    @mouse_event page_id, id, 'mousemove'
 
   click_coordinates: (x, y) ->
     @currentPage.sendEvent('click', x, y)
     @current_command.sendResponse(click: { x: x, y: y })
 
   drag: (page_id, id, other_id) ->
-    this.node(page_id, id).dragTo this.node(page_id, other_id)
+    @node(page_id, id).dragTo @node(page_id, other_id)
     @current_command.sendResponse(true)
 
   drag_by: (page_id, id, x, y) ->
-    this.node(page_id, id).dragBy(x, y)
+    @node(page_id, id).dragBy(x, y)
     @current_command.sendResponse(true)
 
   trigger: (page_id, id, event) ->
-    this.node(page_id, id).trigger(event)
+    @node(page_id, id).trigger(event)
     @current_command.sendResponse(event)
 
   equals: (page_id, id, other_id) ->
     @current_command.sendResponse this.node(page_id, id).isEqual(this.node(page_id, other_id))
 
   reset: ->
-    this.resetPage()
+    @resetPage()
     @current_command.sendResponse(true)
 
   scroll_to: (left, top) ->
@@ -346,7 +345,7 @@ class Poltergeist.Browser
     @current_command.sendResponse(true)
 
   send_keys: (page_id, id, keys) ->
-    target = this.node(page_id, id)
+    target = @node(page_id, id)
 
     # Programmatically generated focus doesn't work for `sendKeys`.
     # That's why we need something more realistic like user behavior.
@@ -448,8 +447,7 @@ class Poltergeist.Browser
 
   add_headers: (headers) ->
     allHeaders = @currentPage.getCustomHeaders()
-    for name, value of headers
-      allHeaders[name] = value
+    allHeaders[name] = value for name, value of headers
     this.set_headers(allHeaders)
 
   add_header: (header, { permanent = true }) ->
@@ -564,9 +562,9 @@ class Poltergeist.Browser
       command.sendResponse(true)
 
   _wildcardToRegexp: (wildcard)->
-    wildcard = wildcard.replace(/[\-\[\]\/\{\}\(\)\+\.\\\^\$\|]/g, "\\$&")
-    wildcard = wildcard.replace(/\*/g, ".*")
-    wildcard = wildcard.replace(/\?/g, ".")
+    wildcard = wildcard.replace(/[\-\[\]\/\{\}\(\)\+\.\\\^\$\|]/g, "\\$&").
+                        replace(/\*/g, ".*").
+                        replace(/\?/g, ".")
     new RegExp(wildcard, "i")
 
   _isElementArgument: (arg)->

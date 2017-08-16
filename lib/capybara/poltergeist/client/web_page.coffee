@@ -435,11 +435,9 @@ class Poltergeist.WebPage
     blacklisted = @urlBlacklist.some (blacklisted_regex) ->
       blacklisted_regex.test url
 
-    if useWhitelist && !whitelisted
-      return true
+    return true if useWhitelist && !whitelisted
 
-    if blacklisted
-      return true
+    return true if blacklisted
 
     false
 
