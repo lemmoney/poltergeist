@@ -26,7 +26,7 @@ module Capybara::Poltergeist
 
     def open(scheme)
       if browser
-        Process.spawn(browser, url(scheme))
+        Process.spawn(browser, url(scheme), "--no-sandbox")
       else
         raise Error, "Could not find a browser executable to open #{url(scheme)}. " \
                      "You can specify one manually using e.g. `:inspector => 'chromium'` " \
